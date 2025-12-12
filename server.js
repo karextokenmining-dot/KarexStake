@@ -7,11 +7,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-// TEST ENDPOINT
-app.get("/", (req, res) => {
-  res.send("KAREX API çalışıyor 🚀");
-});
-
 // BAKİYE ENDPOINT
 app.get("/api/balance/:tgId", async (req, res) => {
   try {

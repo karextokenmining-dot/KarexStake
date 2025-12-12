@@ -6,7 +6,37 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
+const pool = require("./db");
 
+app.get("/api/me", async (req, res) => {
+  const tgId = req.query.tgId;
+  if (!tgId) return res.json({ balance: 0 });
+
+  // kullanıcı var mı?
+  let user = await pool.query(
+    "SELECT * FROM users WHERE tg_id = $1",
+    [tgId]
+  );
+
+  if (user.rows.length === 0) {
+    // kullanıcı yoksa oluştur
+    await pool.query(
+      "INSERT INTO users (tg_id) VALUES ($1)",
+      [tgId]
+    );
+    await pool.query(
+      "INSERT INTO balances (tg_id, balance) VALUES ($1, 0)",
+      [tgId]
+    );
+  }
+
+  const balanceRes = await pool.query(
+    "SELECT balance FROM balances WHERE tg_id = $1",
+    [tgId]
+  );
+
+  res.json({ balance: balanceRes.rows[0].balance });
+});
 // BAKİYE ENDPOINT
 app.get("/api/balance/:tgId", async (req, res) => {
   try {

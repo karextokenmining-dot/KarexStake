@@ -34,24 +34,15 @@
   </div>
 
   <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
+  const tg = window.Telegram.WebApp;
+  tg.ready();
 
-    if (!tg.initDataUnsafe.user) {
-      document.getElementById("balance").innerText = "Telegram içinden aç";
-    } else {
-      const tgId = tg.initDataUnsafe.user.id;
+  const tgId = tg.initDataUnsafe?.user?.id;
 
-      fetch("/api/balance/" + tgId)
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById("balance").innerText =
-            "💰 Bakiyen: " + data.balance + " puan";
-        })
-        .catch(() => {
-          document.getElementById("balance").innerText = "Sunucu hatası";
-        });
-    }
+  fetch(`/api/me?tgId=${tgId}`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("balance").innerText =
+        data.balance + " puan";
+    });
   </script>
-</body>
-</html>

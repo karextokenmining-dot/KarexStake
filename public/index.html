@@ -1,48 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <title>KAREX Mini App</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KAREX Token Mining</title>
+
   <style>
     body {
-      background: #0f172a;
-      color: #e5e7eb;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding-top: 40px;
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(180deg, #050b1e, #0b1a3a);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
     }
+
     .card {
-      background: #020617;
-      border-radius: 12px;
-      padding: 20px;
-      max-width: 320px;
-      margin: auto;
-      box-shadow: 0 0 20px rgba(0,0,0,.6);
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 24px;
+      width: 90%;
+      max-width: 360px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
     }
+
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
     .balance {
-      font-size: 22px;
-      margin: 20px 0;
+      font-size: 20px;
+      margin-top: 16px;
+    }
+
+    .subtitle {
+      margin-top: 12px;
+      font-size: 14px;
+      opacity: 0.7;
     }
   </style>
 </head>
+
 <body>
   <div class="card">
-    <h2>💎 KAREX</h2>
-    <p class="balance" id="balance">Yükleniyor...</p>
-    <small>Telegram Mini App</small>
+    <div class="title">💎 KAREX</div>
+
+    <div class="balance">
+      💰 Bakiyen: <span id="balance">0</span> KRX
+    </div>
+
+    <div class="subtitle">
+      Telegram Mini App
+    </div>
   </div>
 
   <script>
-  const tg = window.Telegram.WebApp;
-  tg.ready();
+    const tg = window.Telegram.WebApp;
+    tg.ready();
 
-  const tgId = tg.initDataUnsafe?.user?.id;
+    const tgId = tg.initDataUnsafe?.user?.id;
 
-  fetch(`/api/me?tgId=${tgId}`)
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("balance").innerText =
-        data.balance + " puan";
-    });
+    if (!tgId) {
+      document.getElementById("balance").innerText = "0";
+    } else {
+      fetch(`/api/me?tgId=${tgId}`)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("balance").innerText = data.balance;
+        })
+        .catch(() => {
+          document.getElementById("balance").innerText = "0";
+        });
+    }
   </script>
+</body>
+</html>

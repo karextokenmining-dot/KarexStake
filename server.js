@@ -133,3 +133,6 @@ app.post('/admin/add-announcement', async (req,res)=>{
 
 // ------------------ Başlat ------------------
 app.listen(port,()=>console.log(`Server çalışıyor: ${port}`));
+app.get('/', (req, res) => {
+  res.sendFile('index.html', { root: 'public' });
+});

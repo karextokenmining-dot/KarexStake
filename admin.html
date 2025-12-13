@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel - Karex</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <h2>Admin Panel</h2>
+    <p>Güvenlik için şifre girin:</p>
+    <input type="password" id="adminPass" placeholder="Admin Şifresi">
+    <button onclick="loginAdmin()">Giriş</button>
+    <p id="adminMessage"></p>
+
+    <div id="adminPanel" style="display:none;">
+        <nav>
+            <button class="tab-btn active" data-tab="market">Market</button>
+            <button class="tab-btn" data-tab="tasks">Görevler</button>
+            <button class="tab-btn" data-tab="announcements">Duyurular</button>
+        </nav>
+
+        <section id="market" class="active">
+            <h3>Market Ürünleri Ekle</h3>
+            <input type="text" id="itemId" placeholder="Ürün ID">
+            <input type="text" id="itemName" placeholder="Ürün Adı">
+            <input type="number" id="itemKRX" placeholder="KRX Miktarı">
+            <input type="number" id="itemTON" placeholder="Fiyat (TON)">
+            <button onclick="addMarketItem()">Ekle</button>
+        </section>
+
+        <section id="tasks">
+            <h3>Görev Ekle</h3>
+            <input type="text" id="taskId" placeholder="Görev ID">
+            <input type="text" id="taskTitle" placeholder="Görev Başlığı">
+            <input type="number" id="taskReward" placeholder="Ödül KRX">
+            <button onclick="addTask()">Ekle</button>
+        </section>
+
+        <section id="announcements">
+            <h3>Duyuru Ekle</h3>
+            <textarea id="announcementText" placeholder="Duyuru Metni"></textarea>
+            <button onclick="addAnnouncement()">Ekle</button>
+        </section>
+    </div>
+</div>
+
+<script>
+let adminPass = '';
+function loginAdmin(){
+    const pass = document.getElementById('adminPass').value.trim();
+    if(!pass){ document.getElementById('adminMessage').innerText="Şifre boş olamaz!"; return; }
+    adminPass = pass;
+    document.getElementById('adminPanel').style.display='block';
+    document.getElementById('adminMessage').innerText = "Admin paneline giriş yapıldı!";
+}
+
+// Sekme kontrolü
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+        document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+});
+
+// ----------------- Market -----------------
+async function addMarketItem(){
+    const id = document.getElementById('itemId').value.trim();
+    const name = document.getElementById('itemName').value.trim();
+    const amountKRX = parseInt(document.getElementById('itemKRX').value);
+    const priceTON = parseInt(document.getElementById('itemTON').value);
+    if(!id||!name||!amountKRX||!priceTON){ alert("Tüm alanları doldur!"); return; }
+
+    const res = await fetch('/admin/add-market-item',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ password:adminPass, id, name, amountKRX, priceTON })
+    });
+    const data = await res.json();
+    if(data.success) alert("Market ürünü eklendi!");
+    else alert("Hata!");
+}
+
+// ----------------- Tasks -----------------
+async function addTask(){
+    const id = document.getElementById('taskId').value.trim();
+    const title = document.getElementById('taskTitle').value.trim();
+    const rewardKRX = parseInt(document.getElementById('taskReward').value);
+    if(!id||!title||!rewardKRX){ alert("Tüm alanları doldur!"); return; }
+
+    const res = await fetch('/admin/add-task',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ password:adminPass, id, title, rewardKRX })
+    });
+    const data = await res.json();
+    if(data.success) alert("Görev eklendi!");
+    else alert("Hata!");
+}
+
+// ----------------- Announcements -----------------
+async function addAnnouncement(){
+    const text = document.getElementById('announcementText').value.trim();
+    if(!text){ alert("Duyuru boş olamaz!"); return; }
+
+    const res = await fetch('/admin/add-announcement',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ password:adminPass, text })
+    });
+    const data = await res.json();
+    if(data.success){ alert("Duyuru eklendi!"); document.getElementById('announcementText').value=''; }
+    else alert("Hata!");
+}
+</script>
+</body>
+</html>

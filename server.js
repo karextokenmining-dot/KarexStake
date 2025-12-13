@@ -59,3 +59,16 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("🚀 API running on port", PORT);
 });
+app.post("/api/topup", async (req, res) => {
+  const { tgId, amount } = req.body;
+
+  if (!tgId || !amount) return res.status(400).json({ ok:false });
+
+  // şimdilik direkt ekle (sonra TON tx doğrulama koyacağız)
+  await pool.query(
+    "UPDATE balances SET balance = balance + $1 WHERE tg_id = $2",
+    [amount, tgId]
+  );
+
+  res.json({ ok: true });
+});

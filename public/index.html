@@ -53,6 +53,21 @@
     <div class="balance">
       💰 Bakiyen: <span id="balance">0</span> KRX
     </div>
+    <button id="mineBtn" style="
+  margin-top:16px;
+  padding:12px 16px;
+  border:none;
+  border-radius:10px;
+  background:#00c2ff;
+  color:#000;
+  font-weight:bold;
+">
+  ⛏️ Mining Başlat
+</button>
+
+<p id="rate" style="margin-top:10px; font-size:13px; opacity:.7;">
+  Kazanç: 0.01 KRX / sn
+</p>
 
     <div class="subtitle">
       Telegram Mini App
@@ -77,6 +92,24 @@
           document.getElementById("balance").innerText = "0";
         });
     }
+    let mining = false;
+let fakeBalance = 0;
+let interval = null;
+
+document.getElementById("mineBtn").onclick = () => {
+  if (mining) return;
+  mining = true;
+
+  const rate = 0.01; // saniyede KRX
+  document.getElementById("rate").innerText =
+    "Kazanç: " + rate + " KRX / sn";
+
+  interval = setInterval(() => {
+    fakeBalance += rate;
+    document.getElementById("balance").innerText =
+      (Number(document.getElementById("balance").innerText) + rate).toFixed(2);
+  }, 1000);
+};
   </script>
 </body>
 </html>

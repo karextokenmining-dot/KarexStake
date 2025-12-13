@@ -1,3 +1,4 @@
+import './bot.js'; // Bot sadece bir kere burada başlatılacak
 import TelegramBot from 'node-telegram-bot-api';
 import client from './db.js';
 

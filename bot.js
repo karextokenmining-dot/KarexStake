@@ -1,15 +1,17 @@
-const TelegramBot = require('node-telegram-bot-api');
-const db = require('./db');
+import TelegramBot from 'node-telegram-bot-api';
+import client from './db.js';
 
-const token = '8284256760:AAE1CMFjJZTyN6BOonubmCIsu6JtPi-0vC4';
+const token = process.env.TELEGRAM_BOT_TOKEN;
 const bot = new TelegramBot(token,{polling:true});
 
-bot.onText(/\/start/, (msg)=>{
+bot.onText(/\/start/, async (msg)=>{
     const chatId = msg.chat.id;
     const username = msg.from.username || `user${chatId}`;
-    const sql = "INSERT IGNORE INTO users (username,password,balanceKRX,balanceTON) VALUES (?, 'bot_generated', 0, 100)";
-    db.query(sql,[username],(err,result)=>{
-        if(err) console.log(err);
-        bot.sendMessage(chatId, `Hoşgeldin ${username}! Otomatik kayıt yapıldı.`);
-    });
+
+    await client.query(
+        'INSERT INTO users(username,password,balanceKRX,balanceTON) VALUES($1,$2,0,100) ON CONFLICT DO NOTHING',
+        [username,'bot_generated']
+    );
+
+    bot.sendMessage(chatId, `Hoşgeldin ${username}! Otomatik kayıt yapıldı.`);
 });

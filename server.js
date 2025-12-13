@@ -1,74 +1,164 @@
-import express from "express";
-import cors from "cors";
-import pool from "./db.js";
-
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const app = express();
-app.use(cors());
+const port = process.env.PORT || 3000;
+
+app.use(express.static('.'));
 app.use(express.json());
-app.use(express.static("public"));
-const pool = require("./db");
 
-app.get("/api/me", async (req, res) => {
-  const tgId = req.query.tgId;
-  if (!tgId) return res.json({ balance: 0 });
+// Dosya yolları
+const USERS_FILE = path.join(__dirname, 'users.json');
+const MARKET_FILE = path.join(__dirname, 'market.json');
+const TASKS_FILE = path.join(__dirname, 'tasks.json');
+const ANNOUNCE_FILE = path.join(__dirname, 'announcements.json');
 
-  // kullanıcı var mı?
-  let user = await pool.query(
-    "SELECT * FROM users WHERE tg_id = $1",
-    [tgId]
-  );
+// JSON okuma/yazma
+function readJSON(file) {
+    if (!fs.existsSync(file)) return {};
+    return JSON.parse(fs.readFileSync(file));
+}
+function writeJSON(file, data) {
+    fs.writeFileSync(file, JSON.stringify(data, null, 2));
+}
 
-  if (user.rows.length === 0) {
-    // kullanıcı yoksa oluştur
-    await pool.query(
-      "INSERT INTO users (tg_id) VALUES ($1)",
-      [tgId]
-    );
-    await pool.query(
-      "INSERT INTO balances (tg_id, balance) VALUES ($1, 0)",
-      [tgId]
-    );
-  }
+// -------------------- Kullanıcı İşlemleri --------------------
 
-  const balanceRes = await pool.query(
-    "SELECT balance FROM balances WHERE tg_id = $1",
-    [tgId]
-  );
+// Kayıt
+app.post('/register', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) return res.json({ success: false, message: "Eksik bilgi" });
 
-  res.json({ balance: balanceRes.rows[0].balance });
-});
-// BAKİYE ENDPOINT
-app.get("/api/balance/:tgId", async (req, res) => {
-  try {
-    const { tgId } = req.params;
+    const users = readJSON(USERS_FILE);
+    if (users[username]) return res.json({ success: false, message: "Kullanıcı zaten var" });
 
-    const q = await pool.query(`
-      SELECT b.points FROM balances b
-      JOIN users u ON u.id = b.user_id
-      WHERE u.tg_id = $1
-    `, [tgId]);
-
-    res.json({ balance: q.rows[0]?.points || 0 });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "DB error" });
-  }
+    users[username] = { password, balanceKRX: 0, balanceTON: 100, history: [] }; // 100 TON başlangıç
+    writeJSON(USERS_FILE, users);
+    res.json({ success: true });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("🚀 API running on port", PORT);
+// Login
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+    const users = readJSON(USERS_FILE);
+    if (!users[username] || users[username].password !== password) {
+        return res.json({ success: false, message: "Hatalı kullanıcı veya şifre" });
+    }
+    res.json({ success: true });
 });
-app.post("/api/topup", async (req, res) => {
-  const { tgId, amount } = req.body;
 
-  if (!tgId || !amount) return res.status(400).json({ ok:false });
+// -------------------- Mining --------------------
+app.get('/balance/:username', (req, res) => {
+    const users = readJSON(USERS_FILE);
+    const user = users[req.params.username];
+    if (!user) return res.json({ balanceKRX: 0, balanceTON: 0 });
+    res.json({ balanceKRX: user.balanceKRX, balanceTON: user.balanceTON });
+});
 
-  // şimdilik direkt ekle (sonra TON tx doğrulama koyacağız)
-  await pool.query(
-    "UPDATE balances SET balance = balance + $1 WHERE tg_id = $2",
-    [amount, tgId]
-  );
+app.post('/mine/:username', (req, res) => {
+    const users = readJSON(USERS_FILE);
+    const user = users[req.params.username];
+    if (!user) return res.json({ success: false });
 
-  res.json({ ok: true });
+    const mined = Math.floor(Math.random() * 5) + 1;
+    user.balanceKRX += mined;
+    user.history.push({ type: "mine", date: new Date().toISOString(), amount: mined });
+    writeJSON(USERS_FILE, users);
+
+    res.json({ success: true, balanceKRX: user.balanceKRX, mined });
+});
+
+// -------------------- Market --------------------
+
+// Market ürünlerini getir
+app.get('/market', (req, res) => {
+    const market = readJSON(MARKET_FILE);
+    res.json(market);
+});
+
+// KRX satın alma
+app.post('/buy/:username/:itemId', (req, res) => {
+    const users = readJSON(USERS_FILE);
+    const user = users[req.params.username];
+    if (!user) return res.json({ success: false });
+
+    const market = readJSON(MARKET_FILE);
+    const item = market[req.params.itemId];
+    if (!item) return res.json({ success: false, message: "Ürün yok" });
+
+    if (user.balanceTON < item.priceTON) return res.json({ success: false, message: "Yetersiz TON" });
+
+    user.balanceTON -= item.priceTON;
+    user.balanceKRX += item.amountKRX;
+    user.history.push({ type: "buy", date: new Date().toISOString(), itemId: req.params.itemId, amountKRX: item.amountKRX });
+    writeJSON(USERS_FILE, users);
+    res.json({ success: true, balanceKRX: user.balanceKRX, balanceTON: user.balanceTON });
+});
+
+// -------------------- Görevler --------------------
+app.get('/tasks', (req, res) => {
+    const tasks = readJSON(TASKS_FILE);
+    res.json(tasks);
+});
+
+app.post('/complete-task/:username/:taskId', (req, res) => {
+    const users = readJSON(USERS_FILE);
+    const user = users[req.params.username];
+    if (!user) return res.json({ success: false });
+
+    const tasks = readJSON(TASKS_FILE);
+    const task = tasks[req.params.taskId];
+    if (!task) return res.json({ success: false, message: "Görev yok" });
+
+    // Ödülü ekle ve history'ye yaz
+    user.balanceKRX += task.rewardKRX;
+    user.history.push({ type: "task", date: new Date().toISOString(), taskId: req.params.taskId, rewardKRX: task.rewardKRX });
+    writeJSON(USERS_FILE, users);
+
+    res.json({ success: true, balanceKRX: user.balanceKRX });
+});
+
+// -------------------- Duyurular --------------------
+app.get('/announcements', (req, res) => {
+    const announcements = readJSON(ANNOUNCE_FILE);
+    res.json(announcements);
+});
+
+// -------------------- Admin Panel --------------------
+// Admin basit şifre ile erişim sağlansın
+const ADMIN_PASS = "karexadmin123";
+
+app.post('/admin/add-market-item', (req, res) => {
+    const { password, id, name, amountKRX, priceTON } = req.body;
+    if (password !== ADMIN_PASS) return res.json({ success: false });
+
+    const market = readJSON(MARKET_FILE);
+    market[id] = { name, amountKRX, priceTON };
+    writeJSON(MARKET_FILE, market);
+    res.json({ success: true });
+});
+
+app.post('/admin/add-announcement', (req, res) => {
+    const { password, text } = req.body;
+    if (password !== ADMIN_PASS) return res.json({ success: false });
+
+    const announcements = readJSON(ANNOUNCE_FILE);
+    const id = Date.now();
+    announcements[id] = { text, date: new Date().toISOString() };
+    writeJSON(ANNOUNCE_FILE, announcements);
+    res.json({ success: true });
+});
+
+app.post('/admin/add-task', (req, res) => {
+    const { password, id, title, rewardKRX } = req.body;
+    if (password !== ADMIN_PASS) return res.json({ success: false });
+
+    const tasks = readJSON(TASKS_FILE);
+    tasks[id] = { title, rewardKRX };
+    writeJSON(TASKS_FILE, tasks);
+    res.json({ success: true });
+});
+
+app.listen(port, () => {
+    console.log(`Server çalışıyor: http://localhost:${port}`);
 });

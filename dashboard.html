@@ -61,13 +61,13 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 
 // ----------------- Mining -----------------
 async function fetchBalance(){
-    const res = await fetch('/balance/'+username);
+    const res = await fetch(`/balance/${username}`);
     const data = await res.json();
     document.getElementById('balanceKRX').innerText = data.balanceKRX;
     document.getElementById('balanceTON').innerText = data.balanceTON;
 }
 async function mine(){
-    const res = await fetch('/mine/'+username,{ method:'POST' });
+    const res = await fetch(`/mine/${username}`,{ method:'POST' });
     const data = await res.json();
     if(data.success){
         document.getElementById('mineResult').innerText = `+${data.mined} KRX kazandın!`;
@@ -146,4 +146,4 @@ loadAnnouncements();
 setInterval(fetchBalance,5000);
 </script>
 </body>
-  </html>
+</html>

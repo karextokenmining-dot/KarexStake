@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - Karex Miner</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <h2>Karex Dashboard</h2>
+    <p>Hoşgeldin, <span id="username"></span></p>
+    <p>💰 Bakiye: <span id="balanceKRX">0</span> KRX | <span id="balanceTON">0</span> TON</p>
+
+    <nav>
+        <button class="tab-btn active" data-tab="mine">Mining</button>
+        <button class="tab-btn" data-tab="market">Market</button>
+        <button class="tab-btn" data-tab="tasks">Görevler</button>
+        <button class="tab-btn" data-tab="announcements">Duyurular</button>
+    </nav>
+
+    <section id="mine" class="active">
+        <button onclick="mine()">KRX Mine Et</button>
+        <p id="mineResult"></p>
+    </section>
+
+    <section id="market">
+        <h3>Market Ürünleri</h3>
+        <table id="marketTable">
+            <tr><th>Ürün</th><th>KRX</th><th>Fiyat (TON)</th><th>İşlem</th></tr>
+        </table>
+    </section>
+
+    <section id="tasks">
+        <h3>Görevler</h3>
+        <table id="tasksTable">
+            <tr><th>Görev</th><th>Ödül</th><th>İşlem</th></tr>
+        </table>
+    </section>
+
+    <section id="announcements">
+        <h3>Duyurular</h3>
+        <ul id="announcementList"></ul>
+    </section>
+</div>
+
+<script>
+const username = localStorage.getItem('username');
+if(!username) window.location.href = 'index.html';
+document.getElementById('username').innerText = username;
+
+// Sekme kontrolü
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+        document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+});
+
+// ----------------- Mining -----------------
+async function fetchBalance(){
+    const res = await fetch('/balance/'+username);
+    const data = await res.json();
+    document.getElementById('balanceKRX').innerText = data.balanceKRX;
+    document.getElementById('balanceTON').innerText = data.balanceTON;
+}
+async function mine(){
+    const res = await fetch('/mine/'+username,{ method:'POST' });
+    const data = await res.json();
+    if(data.success){
+        document.getElementById('mineResult').innerText = `+${data.mined} KRX kazandın!`;
+        fetchBalance();
+    }
+}
+
+// ----------------- Market -----------------
+async function loadMarket(){
+    const res = await fetch('/market');
+    const market = await res.json();
+    const table = document.getElementById('marketTable');
+    table.innerHTML = '<tr><th>Ürün</th><th>KRX</th><th>Fiyat (TON)</th><th>İşlem</th></tr>';
+    for(const id in market){
+        const item = market[id];
+        const row = table.insertRow();
+        row.insertCell(0).innerText = item.name;
+        row.insertCell(1).innerText = item.amountKRX;
+        row.insertCell(2).innerText = item.priceTON;
+        const btn = document.createElement('button');
+        btn.innerText = "Satın Al";
+        btn.onclick = async ()=>{ await buy(id); };
+        row.insertCell(3).appendChild(btn);
+    }
+}
+async function buy(itemId){
+    const res = await fetch(`/buy/${username}/${itemId}`,{ method:'POST' });
+    const data = await res.json();
+    if(data.success){ fetchBalance(); loadMarket(); alert("Başarıyla satın alındı!"); }
+    else alert(data.message || "Hata");
+}
+
+// ----------------- Tasks -----------------
+async function loadTasks(){
+    const res = await fetch('/tasks');
+    const tasks = await res.json();
+    const table = document.getElementById('tasksTable');
+    table.innerHTML = '<tr><th>Görev</th><th>Ödül</th><th>İşlem</th></tr>';
+    for(const id in tasks){
+        const task = tasks[id];
+        const row = table.insertRow();
+        row.insertCell(0).innerText = task.title;
+        row.insertCell(1).innerText = task.rewardKRX;
+        const btn = document.createElement('button');
+        btn.innerText = "Tamamla";
+        btn.onclick = async ()=>{ await completeTask(id); };
+        row.insertCell(2).appendChild(btn);
+    }
+}
+async function completeTask(taskId){
+    const res = await fetch(`/complete-task/${username}/${taskId}`,{ method:'POST' });
+    const data = await res.json();
+    if(data.success) fetchBalance();
+    else alert(data.message || "Hata");
+}
+
+// ----------------- Announcements -----------------
+async function loadAnnouncements(){
+    const res = await fetch('/announcements');
+    const announcements = await res.json();
+    const ul = document.getElementById('announcementList');
+    ul.innerHTML = '';
+    for(const id in announcements){
+        const a = announcements[id];
+        const li = document.createElement('li');
+        li.innerText = `${new Date(a.date).toLocaleString()} - ${a.text}`;
+        ul.appendChild(li);
+    }
+}
+
+// ----------------- Başlangıç -----------------
+fetchBalance();
+loadMarket();
+loadTasks();
+loadAnnouncements();
+setInterval(fetchBalance,5000);
+</script>
+</body>
+  </html>

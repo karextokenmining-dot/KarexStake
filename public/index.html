@@ -112,6 +112,16 @@ document.getElementById("mineBtn").onclick = () => {
 };
   </script>
 </body>
+  function topup(){
+  fetch("/api/topup",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      tgId: tgId,
+      amount: 100
+    })
+  }).then(()=>location.reload());
+}
 </html>
 <button onclick="topup()" style="margin-top:10px;">
   💎 1 TON = 100 KRX (TEST)

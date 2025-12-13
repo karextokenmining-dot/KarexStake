@@ -21,6 +21,7 @@
             <button class="tab-btn" data-tab="announcements">Duyurular</button>
         </nav>
 
+        <!-- Market -->
         <section id="market" class="active">
             <h3>Market Ürünleri Ekle</h3>
             <input type="text" id="itemId" placeholder="Ürün ID">
@@ -28,20 +29,31 @@
             <input type="number" id="itemKRX" placeholder="KRX Miktarı">
             <input type="number" id="itemTON" placeholder="Fiyat (TON)">
             <button onclick="addMarketItem()">Ekle</button>
+
+            <h3>Mevcut Ürünler</h3>
+            <table id="marketTable"><tr><th>ID</th><th>Ürün</th><th>KRX</th><th>Fiyat (TON)</th></tr></table>
         </section>
 
+        <!-- Tasks -->
         <section id="tasks">
             <h3>Görev Ekle</h3>
             <input type="text" id="taskId" placeholder="Görev ID">
             <input type="text" id="taskTitle" placeholder="Görev Başlığı">
             <input type="number" id="taskReward" placeholder="Ödül KRX">
             <button onclick="addTask()">Ekle</button>
+
+            <h3>Mevcut Görevler</h3>
+            <table id="tasksTable"><tr><th>ID</th><th>Görev</th><th>Ödül</th></tr></table>
         </section>
 
+        <!-- Announcements -->
         <section id="announcements">
             <h3>Duyuru Ekle</h3>
             <textarea id="announcementText" placeholder="Duyuru Metni"></textarea>
             <button onclick="addAnnouncement()">Ekle</button>
+
+            <h3>Mevcut Duyurular</h3>
+            <ul id="announcementList"></ul>
         </section>
     </div>
 </div>
@@ -54,6 +66,7 @@ function loginAdmin(){
     adminPass = pass;
     document.getElementById('adminPanel').style.display='block';
     document.getElementById('adminMessage').innerText = "Admin paneline giriş yapıldı!";
+    loadMarket(); loadTasks(); loadAnnouncements();
 }
 
 // Sekme kontrolü
@@ -80,8 +93,23 @@ async function addMarketItem(){
         body: JSON.stringify({ password:adminPass, id, name, amountKRX, priceTON })
     });
     const data = await res.json();
-    if(data.success) alert("Market ürünü eklendi!");
+    if(data.success){ alert("Market ürünü eklendi!"); loadMarket(); }
     else alert("Hata!");
+}
+
+async function loadMarket(){
+    const res = await fetch('/market');
+    const market = await res.json();
+    const table = document.getElementById('marketTable');
+    table.innerHTML = '<tr><th>ID</th><th>Ürün</th><th>KRX</th><th>Fiyat (TON)</th></tr>';
+    for(const id in market){
+        const item = market[id];
+        const row = table.insertRow();
+        row.insertCell(0).innerText = item.id;
+        row.insertCell(1).innerText = item.name;
+        row.insertCell(2).innerText = item.amountKRX;
+        row.insertCell(3).innerText = item.priceTON;
+    }
 }
 
 // ----------------- Tasks -----------------
@@ -97,8 +125,22 @@ async function addTask(){
         body: JSON.stringify({ password:adminPass, id, title, rewardKRX })
     });
     const data = await res.json();
-    if(data.success) alert("Görev eklendi!");
+    if(data.success){ alert("Görev eklendi!"); loadTasks(); }
     else alert("Hata!");
+}
+
+async function loadTasks(){
+    const res = await fetch('/tasks');
+    const tasks = await res.json();
+    const table = document.getElementById('tasksTable');
+    table.innerHTML = '<tr><th>ID</th><th>Görev</th><th>Ödül</th></tr>';
+    for(const id in tasks){
+        const task = tasks[id];
+        const row = table.insertRow();
+        row.insertCell(0).innerText = task.id;
+        row.insertCell(1).innerText = task.title;
+        row.insertCell(2).innerText = task.rewardKRX;
+    }
 }
 
 // ----------------- Announcements -----------------
@@ -112,9 +154,22 @@ async function addAnnouncement(){
         body: JSON.stringify({ password:adminPass, text })
     });
     const data = await res.json();
-    if(data.success){ alert("Duyuru eklendi!"); document.getElementById('announcementText').value=''; }
+    if(data.success){ alert("Duyuru eklendi!"); document.getElementById('announcementText').value=''; loadAnnouncements(); }
     else alert("Hata!");
+}
+
+async function loadAnnouncements(){
+    const res = await fetch('/announcements');
+    const announcements = await res.json();
+    const ul = document.getElementById('announcementList');
+    ul.innerHTML = '';
+    for(const id in announcements){
+        const a = announcements[id];
+        const li = document.createElement('li');
+        li.innerText = `${new Date(a.date).toLocaleString()} - ${a.text}`;
+        ul.appendChild(li);
+    }
 }
 </script>
 </body>
-</html>
+    </html>
